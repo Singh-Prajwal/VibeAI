@@ -12,7 +12,7 @@ import { PlusCircle } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import { Menu } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
-import Image from 'next/image';
+import Image from "next/image";
 
 interface ChatSession {
   id: string;
@@ -64,7 +64,9 @@ export const ChatInterface = () => {
 
   useEffect(() => {
     if (activeChatId) {
-      const currentSession = chatSessions.find(session => session.id === activeChatId);
+      const currentSession = chatSessions.find(
+        (session) => session.id === activeChatId
+      );
       if (currentSession) {
         setMessages(currentSession.messages);
       }
@@ -96,7 +98,9 @@ export const ChatInterface = () => {
 
     setChatSessions((prevSessions) =>
       prevSessions.map((session) =>
-        session.id === activeChatId ? { ...session, messages: newMessages } : session
+        session.id === activeChatId
+          ? { ...session, messages: newMessages }
+          : session
       )
     );
 
@@ -127,7 +131,9 @@ export const ChatInterface = () => {
 
       setChatSessions((prevSessions) =>
         prevSessions.map((session) =>
-          session.id === activeChatId ? { ...session, messages: updatedMessages } : session
+          session.id === activeChatId
+            ? { ...session, messages: updatedMessages }
+            : session
         )
       );
     } catch (error) {
@@ -141,7 +147,9 @@ export const ChatInterface = () => {
 
       setChatSessions((prevSessions) =>
         prevSessions.map((session) =>
-          session.id === activeChatId ? { ...session, messages: updatedMessages } : session
+          session.id === activeChatId
+            ? { ...session, messages: updatedMessages }
+            : session
         )
       );
     } finally {
@@ -153,10 +161,16 @@ export const ChatInterface = () => {
     <div className="flex flex-col h-screen bg-background">
       <div className="flex h-full">
         <div
-          className={`flex-col ${isSidebarOpen ? "flex" : "hidden"} w-[240px] border-r border-border bg-secondary p-4 ${isSidebarOpen ? "md:flex" : "md:hidden"}`}
+          className={`flex-col ${
+            isSidebarOpen ? "flex" : "hidden"
+          } w-[240px] border-r border-border bg-secondary p-4 ${
+            isSidebarOpen ? "md:flex" : "md:hidden"
+          }`}
         >
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-medium text-secondary-foreground">Previous Chats</h2>
+            <h2 className="text-sm font-medium text-secondary-foreground">
+              Previous Chats
+            </h2>
             <Button
               variant="ghost"
               size="icon"
@@ -193,10 +207,10 @@ export const ChatInterface = () => {
               <Menu className="w-6 h-6" />
             </Button>
             <div className="flex items-center gap-2">
-              <Image 
-                src="/VibeAI_logo.png" 
+              <Image
+                src="/VibeAI_logo.png"
                 alt="VibeAI Logo"
-                width={50} 
+                width={50}
                 height={50}
               />
               <h1 className="text-lg font-semibold text-foreground">VibeAI</h1>
@@ -209,13 +223,22 @@ export const ChatInterface = () => {
               <div className="flex flex-col gap-6 p-4 md:p-6">
                 {messages.length === 0 && (
                   <div className="text-center space-y-2">
-                    <h2 className="text-xl font-medium text-foreground">Welcome to our Chatbot</h2>
-                    <p className="text-sm text-muted-foreground">Our chatbot is designed to provide you with instant support and information.</p>
+                    <h2 className="text-xl font-medium text-foreground">
+                      Welcome to VibeAI
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      VibeAI is designed to provide you with instant support and
+                      information.
+                    </p>
                   </div>
                 )}
                 <AnimatePresence initial={false}>
                   {messages.map((message, index) => (
-                    <ChatMessage key={index} role={message.role} content={message.content} />
+                    <ChatMessage
+                      key={index}
+                      role={message.role}
+                      content={message.content}
+                    />
                   ))}
                 </AnimatePresence>
               </div>
@@ -230,8 +253,8 @@ export const ChatInterface = () => {
                 placeholder="Type your message..."
                 className="flex-1 bg-secondary border-primary text-foreground placeholder:text-muted-foreground"
               />
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={isLoading}
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
               >
