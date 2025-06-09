@@ -11,7 +11,6 @@ const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GOOGLE_API_KEY!);
 export async function POST(req: Request) {
   try {
     const { prompt, history } = await req.json();
-
     if (!prompt) {
       return NextResponse.json(
         { error: "Prompt is required" },

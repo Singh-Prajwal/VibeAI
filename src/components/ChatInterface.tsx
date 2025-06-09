@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState, useRef, useEffect, FormEvent } from "react";
+import { useState, useRef, useEffect, useCallback, FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -10,8 +10,9 @@ import { SendHorizonal } from "lucide-react";
 import { ChatMessage, Message } from "./ChatMessage";
 import { PlusCircle } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
-import { Menu } from "lucide-react"; // Import Menu icon
-import { ThemeToggle } from "./ThemeToggle"; // Re-import ThemeToggle
+import { Menu } from "lucide-react";
+import { ThemeToggle } from "./ThemeToggle";
+import Image from 'next/image';
 
 interface ChatSession {
   id: string;
@@ -26,7 +27,19 @@ export const ChatInterface = () => {
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // New state for sidebar visibility
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  const startNewChat = useCallback(() => {
+    const newChatId = `chat-${Date.now()}`;
+    const newChat: ChatSession = {
+      id: newChatId,
+      title: `New Chat ${chatSessions.length + 1}`,
+      messages: [],
+    };
+    setChatSessions((prev) => [...prev, newChat]);
+    setActiveChatId(newChatId);
+    setMessages([]);
+  }, [chatSessions.length]);
 
   useEffect(() => {
     const storedSessions = localStorage.getItem("chatSessions");
@@ -34,7 +47,6 @@ export const ChatInterface = () => {
       const parsedSessions: ChatSession[] = JSON.parse(storedSessions);
       setChatSessions(parsedSessions);
       if (parsedSessions.length > 0) {
-        // Load the most recent chat or the first one if no active chat is set
         const lastChat = parsedSessions[parsedSessions.length - 1];
         setActiveChatId(lastChat.id);
         setMessages(lastChat.messages);
@@ -44,7 +56,7 @@ export const ChatInterface = () => {
     } else {
       startNewChat();
     }
-  }, []);
+  }, [startNewChat]);
 
   useEffect(() => {
     localStorage.setItem("chatSessions", JSON.stringify(chatSessions));
@@ -55,8 +67,8 @@ export const ChatInterface = () => {
       const currentSession = chatSessions.find(session => session.id === activeChatId);
       if (currentSession) {
         setMessages(currentSession.messages);
-      } 
-    } 
+      }
+    }
   }, [activeChatId, chatSessions]);
 
   useEffect(() => {
@@ -67,18 +79,6 @@ export const ChatInterface = () => {
       }
     }
   }, [messages]);
-
-  const startNewChat = () => {
-    const newChatId = `chat-${Date.now()}`;
-    const newChat: ChatSession = {
-      id: newChatId,
-      title: `New Chat ${chatSessions.length + 1}`,
-      messages: [],
-    };
-    setChatSessions((prev) => [...prev, newChat]);
-    setActiveChatId(newChatId);
-    setMessages([]); // Clear messages for the new chat
-  };
 
   const loadChat = (chatId: string) => {
     setActiveChatId(chatId);
@@ -94,7 +94,6 @@ export const ChatInterface = () => {
     setInput("");
     setIsLoading(true);
 
-    // Update the current chat session with the new messages
     setChatSessions((prevSessions) =>
       prevSessions.map((session) =>
         session.id === activeChatId ? { ...session, messages: newMessages } : session
@@ -109,7 +108,6 @@ export const ChatInterface = () => {
           parts: [{ text: msg.content }],
         }));
 
-      // We remove the last user message from history for the API call
       history.pop();
 
       const response = await fetch("/api/chat", {
@@ -127,7 +125,6 @@ export const ChatInterface = () => {
       const updatedMessages = [...newMessages, modelMessage];
       setMessages(updatedMessages);
 
-      // Update the current chat session with the model's reply
       setChatSessions((prevSessions) =>
         prevSessions.map((session) =>
           session.id === activeChatId ? { ...session, messages: updatedMessages } : session
@@ -142,7 +139,6 @@ export const ChatInterface = () => {
       const updatedMessages = [...newMessages, errorMessage];
       setMessages(updatedMessages);
 
-      // Update the current chat session with the error message
       setChatSessions((prevSessions) =>
         prevSessions.map((session) =>
           session.id === activeChatId ? { ...session, messages: updatedMessages } : session
@@ -155,7 +151,6 @@ export const ChatInterface = () => {
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      {/* Previous Chats Sidebar */}
       <div className="flex h-full">
         <div
           className={`flex-col ${isSidebarOpen ? "flex" : "hidden"} w-[240px] border-r border-border bg-secondary p-4 ${isSidebarOpen ? "md:flex" : "md:hidden"}`}
@@ -186,9 +181,8 @@ export const ChatInterface = () => {
             </div>
           </ScrollArea>
         </div>
-        
+
         <div className="flex-1 flex flex-col">
-          {/* Header for mobile sidebar toggle and theme toggle */}
           <header className="flex items-center justify-between p-4 border-b border-border">
             <Button
               variant="ghost"
@@ -199,13 +193,17 @@ export const ChatInterface = () => {
               <Menu className="w-6 h-6" />
             </Button>
             <div className="flex items-center gap-2">
-              <img src="/VibeAI_logo.png" alt="VibeAI Logo" className="h-10 w-10" />
+              <Image 
+                src="/VibeAI_logo.png" 
+                alt="VibeAI Logo"
+                width={50} 
+                height={50}
+              />
               <h1 className="text-lg font-semibold text-foreground">VibeAI</h1>
             </div>
             <ThemeToggle />
           </header>
 
-          {/* Main Chat Area */}
           <main className="flex-1 overflow-hidden">
             <ScrollArea className="h-full" ref={scrollAreaRef}>
               <div className="flex flex-col gap-6 p-4 md:p-6">
@@ -224,7 +222,6 @@ export const ChatInterface = () => {
             </ScrollArea>
           </main>
 
-          {/* Input Area */}
           <form onSubmit={handleSubmit} className="border-t border-border p-4">
             <div className="flex gap-3">
               <Input
