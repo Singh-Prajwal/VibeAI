@@ -1,17 +1,13 @@
-// components/ChatInterface.tsx
-
 "use client";
 
 import { useState, useRef, useEffect, useCallback, FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { SendHorizonal } from "lucide-react";
-import { ChatMessage, Message } from "./ChatMessage";
-import { PlusCircle } from "lucide-react";
-import { AnimatePresence } from "framer-motion";
-import { Menu } from "lucide-react";
+import { SendHorizonal, PlusCircle, Menu } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { ThemeToggle } from "./ThemeToggle";
+import { ChatMessage } from "./ChatMessage";
 import Image from "next/image";
 
 interface ChatSession {
@@ -19,6 +15,38 @@ interface ChatSession {
   title: string;
   messages: Message[];
 }
+
+export interface Message {
+  role: "user" | "model" | "loading";
+  content: string;
+  sentiment?: string;
+}
+
+const TypingAnimation = () => (
+  <span className="inline-block">
+    <motion.span
+      animate={{ opacity: [0, 1, 0] }}
+      transition={{ duration: 1, repeat: Infinity }}
+      className="mx-0.5"
+    >
+      .
+    </motion.span>
+    <motion.span
+      animate={{ opacity: [0, 1, 0] }}
+      transition={{ duration: 1, repeat: Infinity, delay: 0.3 }}
+      className="mx-0.5"
+    >
+      .
+    </motion.span>
+    <motion.span
+      animate={{ opacity: [0, 1, 0] }}
+      transition={{ duration: 1, repeat: Infinity, delay: 0.6 }}
+      className="mx-0.5"
+    >
+      .
+    </motion.span>
+  </span>
+);
 
 export const ChatInterface = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -67,11 +95,14 @@ export const ChatInterface = () => {
       const currentSession = chatSessions.find(
         (session) => session.id === activeChatId
       );
-      if (currentSession) {
+      if (
+        currentSession &&
+        currentSession.messages.length !== messages.length
+      ) {
         setMessages(currentSession.messages);
       }
     }
-  }, [activeChatId, chatSessions]);
+  }, [activeChatId, chatSessions, messages.length]);
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -91,7 +122,9 @@ export const ChatInterface = () => {
     if (!input.trim() || isLoading) return;
 
     const userMessage: Message = { role: "user", content: input };
-    const newMessages = [...messages, userMessage];
+    const loadingMessage: Message = { role: "loading", content: "Thinking..." };
+
+    const newMessages = [...messages, userMessage, loadingMessage];
     setMessages(newMessages);
     setInput("");
     setIsLoading(true);
@@ -111,7 +144,6 @@ export const ChatInterface = () => {
           role: msg.role === "model" ? "model" : "user",
           parts: [{ text: msg.content }],
         }));
-
       history.pop();
 
       const response = await fetch("/api/chat", {
@@ -120,13 +152,16 @@ export const ChatInterface = () => {
         body: JSON.stringify({ prompt: input, history }),
       });
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
-      }
+      if (!response.ok) throw new Error(`API error: ${response.statusText}`);
 
       const data = await response.json();
-      const modelMessage: Message = { role: "model", content: data.reply };
-      const updatedMessages = [...newMessages, modelMessage];
+      const modelMessage: Message = {
+        role: "model",
+        content: data.reply,
+        sentiment: data.sentiment,
+      };
+
+      const updatedMessages = [...messages, userMessage, modelMessage];
       setMessages(updatedMessages);
 
       setChatSessions((prevSessions) =>
@@ -142,7 +177,7 @@ export const ChatInterface = () => {
         role: "model",
         content: "Sorry, I ran into a problem. Please try again.",
       };
-      const updatedMessages = [...newMessages, errorMessage];
+      const updatedMessages = [...messages, userMessage, errorMessage];
       setMessages(updatedMessages);
 
       setChatSessions((prevSessions) =>
@@ -160,41 +195,61 @@ export const ChatInterface = () => {
   return (
     <div className="flex flex-col h-screen bg-background">
       <div className="flex h-full">
-        <div
-          className={`flex-col ${
-            isSidebarOpen ? "flex" : "hidden"
-          } w-[240px] border-r border-border bg-secondary p-4 ${
-            isSidebarOpen ? "md:flex" : "md:hidden"
-          }`}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-medium text-secondary-foreground">
-              Previous Chats
-            </h2>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={startNewChat}
-              className="text-secondary-foreground hover:bg-primary/10"
+        <AnimatePresence>
+          {isSidebarOpen && (
+            <motion.div
+              key="sidebar"
+              initial={{ x: -250, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: -250, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 100, damping: 20 }}
+              className="flex-col w-[240px] border-r border-border bg-secondary p-4 md:flex"
             >
-              <PlusCircle className="w-5 h-5" />
-            </Button>
-          </div>
-          <ScrollArea className="flex-1 pr-2">
-            <div className="space-y-2">
-              {chatSessions.map((session) => (
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-medium text-secondary-foreground">
+                  Previous Chats
+                </h2>
                 <Button
-                  key={session.id}
-                  variant={activeChatId === session.id ? "secondary" : "ghost"}
-                  className="w-full justify-start text-left"
-                  onClick={() => loadChat(session.id)}
+                  variant="ghost"
+                  size="icon"
+                  onClick={startNewChat}
+                  className="text-secondary-foreground hover:bg-primary/10"
                 >
-                  {session.title}
+                  <PlusCircle className="w-5 h-5" />
                 </Button>
-              ))}
-            </div>
-          </ScrollArea>
-        </div>
+              </div>
+              <ScrollArea className="flex-1 pr-2">
+                <motion.div
+                  layout
+                  className="space-y-2"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {chatSessions.map((session) => (
+                    <motion.div
+                      key={session.id}
+                      layout
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <Button
+                        variant={
+                          activeChatId === session.id ? "secondary" : "ghost"
+                        }
+                        className="w-full justify-start text-left"
+                        onClick={() => loadChat(session.id)}
+                      >
+                        {session.title}
+                      </Button>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </ScrollArea>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="flex-1 flex flex-col">
           <header className="flex items-center justify-between p-4 border-b border-border">
@@ -222,7 +277,12 @@ export const ChatInterface = () => {
             <ScrollArea className="h-full" ref={scrollAreaRef}>
               <div className="flex flex-col gap-6 p-4 md:p-6">
                 {messages.length === 0 && (
-                  <div className="text-center space-y-2">
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.5 }}
+                    className="text-center space-y-2"
+                  >
                     <h2 className="text-xl font-medium text-foreground">
                       Welcome to VibeAI
                     </h2>
@@ -230,15 +290,26 @@ export const ChatInterface = () => {
                       VibeAI is designed to provide you with instant support and
                       information.
                     </p>
-                  </div>
+                  </motion.div>
                 )}
                 <AnimatePresence initial={false}>
                   {messages.map((message, index) => (
-                    <ChatMessage
+                    <motion.div
                       key={index}
-                      role={message.role}
-                      content={message.content}
-                    />
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {message.role === "loading" ? (
+                        <div className="text-foreground">
+                          Thinking
+                          <TypingAnimation />
+                        </div>
+                      ) : (
+                        <ChatMessage message={message} />
+                      )}
+                    </motion.div>
                   ))}
                 </AnimatePresence>
               </div>
